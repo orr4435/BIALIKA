@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בניית דוח עירוני</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(to bottom, #e8f1f8, #d4e4f5);
+            font-family: Arial, sans-serif;
+            text-align: right;
+            direction: rtl;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #343a40;
+            font-weight: bold;
+            background: linear-gradient(90deg, #4285f4, #ea4335, #fbbc05, #34a853);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .selection-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            width: 95%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        .selection-section {
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            position: relative;
+        }
+
+        .selection-section label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+            color: #333;
+        }
+
+        .form-select, .autocomplete {
+            font-size: 0.8rem;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            background-color: #f8fafc;
+            transition: all 0.3s;
+            height: 100px;
+            box-sizing: border-box;
+        }
+
+        .form-select:hover, .autocomplete:hover {
+            background-color: #eef3fa;
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-size: 0.9rem;
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #4285f4;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #357ae8;
+        }
+
+        .btn-outline-secondary {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            color: #555;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-generate {
+            background-color: #34a853;
+            color: #fff;
+            border: none;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .btn-generate:hover {
+            background-color: #0f9d58;
+        }
+
+        .btn-download {
+            background-color: #fbbc05;
+            color: #333;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-download:hover {
+            background-color: #e2aa04;
+        }
+
+        .btn-full-data {
+            background-color: #f9f9f9;
+            color: #4285f4;
+            border: 1px solid #4285f4;
+            font-size: 1rem;
+        }
+
+        .btn-full-data:hover {
+            background-color: #e4f2fe;
+        }
+
+        .report-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-height: 75vh;
+            width: 95%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .report-table th, .report-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+
+        .report-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        .report-table td {
+            color: #555;
+        }
+
+        .icon {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            overflow-y: auto;
+            max-height: 300px; /* Scrollable area */
+            padding-right: 10px;
+        }
+
+        .checkbox-group label {
+            font-size: 0.85rem;
+            flex: 0 0 23%; /* Four checkboxes per row */
+            padding: 10px;
+            background: linear-gradient(45deg, rgba(66, 133, 244, 0.2), rgba(234, 67, 53, 0.2), rgba(251, 188, 5, 0.2), rgba(52, 168, 83, 0.2));
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+        }
+
+        .checkbox-group label:hover {
+            background: linear-gradient(45deg, rgba(234, 67, 53, 0.2), rgba(251, 188, 5, 0.2), rgba(52, 168, 83, 0.2), rgba(66, 133, 244, 0.2));
+            cursor: pointer;
+        }
+
+        .checkbox-group input:checked + label {
+            background: linear-gradient(45deg, rgba(52, 168, 83, 0.2), rgba(66, 133, 244, 0.2), rgba(234, 67, 53, 0.2), rgba(251, 188, 5, 0.2));
+        }
+
+        .scrollable-table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container-fluid my-4">
+        <h1 class="gradient-text">בניית דוח עירוני</h1>
+
+        <!-- Selection Panel -->
+        <div class="selection-container">
+            <div class="selection-section">
+                <label for="municipalitySelect"><i class="fas fa-city icon"></i>בחר רשות</label>
+                <select id="municipalitySelect" class="form-select" disabled>
+                    <option value="" disabled selected>בחר רשות</option>
+                </select>
+            </div>
+            <div class="selection-section">
+                <label for="dataSelect"><i class="fas fa-list icon"></i>בחר פרמטרים לדוח</label>
+                <div id="checkboxesContainer" class="checkbox-group"></div>
+            </div>
+        </div>
+
+        <div class="buttons-container">
+            <button id="generateReport" class="btn btn-generate" disabled>צור דוח</button>
+            <button id="fullDataBtn" class="btn btn-full-data" onclick="window.open('https://example.com', '_blank')">FULL DATA DB</button>
+        </div>
+
+        <!-- Report Table -->
+        <div id="reportContainer" class="report-container" style="display: none;">
+            <h3>דו"ח עירוני</h3>
+            <div class="scrollable-table-container">
+                <table class="report-table" id="reportTable"></table>
+            </div>
+            <button id="downloadButton" class="btn btn-download" style="display: none;">הורד כקובץ Excel</button>
+        </div>
+
+    </div>
+
+    <script>
+        const DATA_URL = 'https://script.google.com/macros/s/AKfycbwdlRohKnQryjzzPuEhZEJwsdcfqZgAAVWc1PG8cPWSefzT13XQz602QMyDi9jUcCic/exec';
+        let municipalData = [];
+
+        async function fetchData() {
+            try {
+                const response = await fetch(DATA_URL);
+                municipalData = await response.json();
+                populateMunicipalitySelect();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert('Failed to fetch municipal data.');
+            }
+        }
+
+        function populateMunicipalitySelect() {
+            const municipalitySelect = document.getElementById('municipalitySelect');
+            municipalitySelect.innerHTML = '<option value="" disabled selected>בחר רשות</option>'; // Reset list
+            municipalData.forEach(municipality => {
+                const option = document.createElement('option');
+                option.value = municipality['muni'];
+                option.text = municipality['muni'];
+                municipalitySelect.appendChild(option);
+            });
+            municipalitySelect.disabled = false;
+        }
+
+        function handleMunicipalitySelect() {
+            const selectedMunicipality = document.getElementById('municipalitySelect').value;
+            if (!selectedMunicipality) return;
+
+            // Get the selected municipality's data
+            const municipality = municipalData.find(m => m['muni'] === selectedMunicipality);
+
+            // Generate checkboxes for parameters
+            const checkboxesContainer = document.getElementById('checkboxesContainer');
+            checkboxesContainer.innerHTML = ''; // Clear previous checkboxes
+
+            Object.keys(municipality).forEach((key) => {
+                if (key !== 'muni') {  // Skip muni name field
+                    const label = document.createElement('label');
+                    label.innerHTML = `
+                        <input type="checkbox" value="${key}" class="parameter-checkbox" /> ${key}
+                    `;
+                    checkboxesContainer.appendChild(label);
+                }
+            });
+
+            document.getElementById('generateReport').disabled = false;
+        }
+
+        function generateReport() {
+            const selectedMunicipality = document.getElementById('municipalitySelect').value;
+            const municipality = municipalData.find(m => m['muni'] === selectedMunicipality);
+
+            const selectedParams = Array.from(document.querySelectorAll('.parameter-checkbox:checked')).map(checkbox => checkbox.value);
+            if (selectedParams.length === 0) {
+                alert("בחר לפחות פרמטר אחד לדוח.");
+                return;
+            }
+
+            const reportTable = document.getElementById('reportTable');
+            reportTable.innerHTML = ''; // Clear previous report
+
+            // Table Header
+            const headerRow = document.createElement('tr');
+            const thMunicipality = document.createElement('th');
+            thMunicipality.textContent = 'שם רשות';
+            headerRow.appendChild(thMunicipality);
+
+            selectedParams.forEach(param => {
+                const th = document.createElement('th');
+                th.textContent = param;
+                headerRow.appendChild(th);
+            });
+            reportTable.appendChild(headerRow);
+
+            // Table Data
+            let row = document.createElement('tr');
+            const tdMunicipality = document.createElement('td');
+            tdMunicipality.textContent = municipality['muni'];
+            row.appendChild(tdMunicipality);
+
+            selectedParams.forEach(param => {
+                const td = document.createElement('td');
+                td.textContent = formatNumber(municipality[param] || 'N/A');
+                row.appendChild(td);
+            });
+            reportTable.appendChild(row);
+
+            // Check if there are more than 7 items, start a second row
+            if (selectedParams.length > 7) {
+                row = document.createElement('tr');
+                reportTable.appendChild(row);
+            }
+
+            // Show report
+            document.getElementById('reportContainer').style.display = 'block';
+            document.getElementById('downloadButton').style.display = 'inline-block';
+        }
+
+        function formatNumber(num) {
+            if (isNaN(num)) return num;
+            return num.toLocaleString();
+        }
+
+        function downloadReport() {
+            const table = document.getElementById('reportTable');
+            const rows = Array.from(table.rows);
+            const csvContent = rows.map(row => {
+                return Array.from(row.cells).map(cell => cell.textContent).join(',');
+            }).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'MunicipalReport.csv';
+            link.click();
+        }
+
+        document.getElementById('municipalitySelect').addEventListener('change', handleMunicipalitySelect);
+        document.getElementById('generateReport').addEventListener('click', generateReport);
+        document.getElementById('downloadButton').addEventListener('click', downloadReport);
+
+        // Load data when the page is loaded
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
