@@ -142,22 +142,124 @@ export function renderRes(el, m0, m1) {
   el.appendChild(svg);
 }
 
-/* -------- map engine (canvas) -------- */
-export function createMap(canvas, getState, onSelect) {
-  const map = { k: 1, tx: 0, ty: 0, drag: null, hov: null, W: 0, H: 0, proj: null, bubbles: [] };
-  function mapProj() {
-    const lats = DATA.fabric.map(p => p[0]), lons = DATA.fabric.map(p => p[1]);
-    const la0 = Math.min(...lats), la1 = Math.max(...lats), lo0 = Math.min(...lons), lo1 = Math.max(...lons);
-    return { la0, la1, lo0, lo1, cosLat: Math.cos((la0 + la1) / 2 * Math.PI / 180) };
+/* -------- map engine (canvas + GovMap ITM tile basemap) -------- */
+
+/* WGS84 -> Israel TM Grid (EPSG:2039); validated against pyproj (err < 2m). */
+function itm(lat, lon) {
+  const D = Math.PI / 180;
+  const aW = 6378137, fW = 1 / 298.257223563, e2W = fW * (2 - fW);
+  const la = lat * D, lo = lon * D, sla = Math.sin(la), cla = Math.cos(la);
+  const Nw = aW / Math.sqrt(1 - e2W * sla * sla);
+  const X = Nw * cla * Math.cos(lo), Y = Nw * cla * Math.sin(lo), Z = Nw * (1 - e2W) * sla;
+  const sec = Math.PI / 648000;
+  const tx = -24.0024, ty = -17.1032, tz = -17.8444;
+  const rx = -0.33077 * sec, ry = -1.85269 * sec, rz = 1.66969 * sec;
+  const sc = 1 + 5.4248e-6;
+  const X1 = X - tx, Y1 = Y - ty, Z1 = Z - tz;
+  const Xl = (X1 + rz * Y1 - ry * Z1) / sc;
+  const Yl = (-rz * X1 + Y1 + rx * Z1) / sc;
+  const Zl = (ry * X1 - rx * Y1 + Z1) / sc;
+  const a = 6378137, f = 1 / 298.257222101, e2 = f * (2 - f);
+  const p = Math.hypot(Xl, Yl);
+  let phi = Math.atan2(Zl, p * (1 - e2)), prev = 0;
+  for (let i = 0; i < 8 && Math.abs(phi - prev) > 1e-13; i++) {
+    prev = phi;
+    const Ng = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2);
+    phi = Math.atan2(Zl + e2 * Ng * Math.sin(phi), p);
   }
-  function toXY(lat, lon) {
-    const p = map.proj, pad = 30;
-    const w = map.W - 2 * pad, h = map.H - 2 * pad;
-    const spanX = (p.lo1 - p.lo0) * p.cosLat, spanY = p.la1 - p.la0;
-    const s = Math.min(w / spanX, h / spanY);
-    const cx = map.W / 2 + ((lon - (p.lo0 + p.lo1) / 2) * p.cosLat) * s;
-    const cy = map.H / 2 - (lat - (p.la0 + p.la1) / 2) * s;
-    return [cx * map.k + map.tx, cy * map.k + map.ty];
+  const lam = Math.atan2(Yl, Xl);
+  const lat0 = 31.73439361111111 * D, lon0 = 35.20451694444445 * D;
+  const k0 = 1.0000067, x0 = 219529.584, y0 = 626907.39;
+  const ep2 = e2 / (1 - e2);
+  const sp = Math.sin(phi), cp = Math.cos(phi), tp = Math.tan(phi);
+  const N = a / Math.sqrt(1 - e2 * sp * sp);
+  const T = tp * tp, C = ep2 * cp * cp, A = cp * (lam - lon0);
+  const M = m => a * ((1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 ** 3 / 256) * m
+    - (3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * m)
+    + (15 * e2 * e2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * m)
+    - (35 * e2 ** 3 / 3072) * Math.sin(6 * m));
+  const x = x0 + k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5 / 120);
+  const y = y0 + k0 * (M(phi) - M(lat0) + N * tp * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24
+    + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6 / 720));
+  return [x, y];
+}
+
+/* GovMap ArcGIS tile cache scheme (EPSG:2039). */
+const GOV_ORIGIN = { x: -5403700, y: 7116700 };
+const GOV_LODS = [793.751587503175, 264.583862501058, 132.291931250529, 66.1459656252646,
+  26.4583862501058, 13.2291931250529, 6.61459656252646, 2.64583862501058,
+  1.32291931250529, 0.661459656252646, 0.330729828126323];
+const GOV_LAYERS = {
+  map: { code: 'B0B0MARS27052024', ext: 'png' },
+  sat: { code: 'B0BZ1ORTO23', ext: 'jpg' },
+};
+
+function isDarkMode() {
+  const m = document.documentElement.getAttribute('data-mode');
+  if (m) return m === 'dark';
+  return matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+export function createMap(canvas, getState, onSelect) {
+  const map = { cx: 0, cy: 0, res: 1, fitRes: 1, drag: null, hov: null, W: 0, H: 0, bubbles: [], fitted: false, raf: 0, alive: true };
+
+  /* project all points to ITM once */
+  const pts = new Map();
+  DATA.streets.forEach(s => pts.set(s.name, itm(s.lat, s.lon)));
+  const ext = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const grow = (x, y) => { if (x < ext.x0) ext.x0 = x; if (x > ext.x1) ext.x1 = x; if (y < ext.y0) ext.y0 = y; if (y > ext.y1) ext.y1 = y; };
+  DATA.fabric.forEach(p => { const [x, y] = itm(p[0], p[1]); grow(x, y); });
+  pts.forEach(([x, y]) => grow(x, y));
+
+  function fit() {
+    const pad = 40;
+    map.res = Math.max((ext.x1 - ext.x0) / Math.max(map.W - 2 * pad, 100), (ext.y1 - ext.y0) / Math.max(map.H - 2 * pad, 100));
+    map.cx = (ext.x0 + ext.x1) / 2; map.cy = (ext.y0 + ext.y1) / 2;
+    map.fitRes = map.res;
+  }
+  const toScreen = (x, y) => [map.W / 2 + (x - map.cx) / map.res, map.H / 2 - (y - map.cy) / map.res];
+  const fromScreen = (px, py) => [map.cx + (px - map.W / 2) * map.res, map.cy - (py - map.H / 2) * map.res];
+
+  /* tile loader with small LRU cache */
+  const tiles = new Map();
+  function tileImg(layer, lod, row, col) {
+    const key = `${layer.code}/${lod}/${row}/${col}`;
+    let t = tiles.get(key);
+    if (!t) {
+      if (tiles.size > 400) tiles.delete(tiles.keys().next().value);
+      const img = new Image();
+      t = { img, ok: false };
+      img.onload = () => { t.ok = true; scheduleDraw(); };
+      img.src = `https://cdn.govmap.gov.il/${layer.code}/L${String(lod).padStart(2, '0')}/R${row.toString(16).padStart(8, '0')}/C${col.toString(16).padStart(8, '0')}.${layer.ext}`;
+      tiles.set(key, t);
+    }
+    return t;
+  }
+  function scheduleDraw() {
+    if (!map.alive) return;
+    cancelAnimationFrame(map.raf);
+    map.raf = requestAnimationFrame(() => draw());
+  }
+
+  function drawTiles(ctx) {
+    const st = getState();
+    const layer = GOV_LAYERS[st.basemap === 'sat' ? 'sat' : 'map'];
+    let lod = 0;
+    for (let i = 0; i < GOV_LODS.length; i++) if (GOV_LODS[i] >= map.res * 0.75) lod = i;
+    const T = GOV_LODS[lod] * 256;
+    const left = map.cx - map.W / 2 * map.res, right = map.cx + map.W / 2 * map.res;
+    const top = map.cy + map.H / 2 * map.res, bottom = map.cy - map.H / 2 * map.res;
+    const c0 = Math.max(0, Math.floor((left - GOV_ORIGIN.x) / T)), c1 = Math.floor((right - GOV_ORIGIN.x) / T);
+    const r0 = Math.max(0, Math.floor((GOV_ORIGIN.y - top) / T)), r1 = Math.floor((GOV_ORIGIN.y - bottom) / T);
+    if ((c1 - c0 + 1) * (r1 - r0 + 1) > 128) return;
+    const sz = T / map.res + 0.5;
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      const t = tileImg(layer, lod, r, c);
+      if (!t.ok) continue;
+      const [sx, sy] = toScreen(GOV_ORIGIN.x + c * T, GOV_ORIGIN.y - r * T);
+      ctx.drawImage(t.img, sx, sy, sz, sz);
+    }
+    if (isDarkMode()) { ctx.fillStyle = 'rgba(8,12,22,0.45)'; ctx.fillRect(0, 0, map.W, map.H); }
   }
   function mapData() {
     const { m0, m1 } = getState();
@@ -179,18 +281,19 @@ export function createMap(canvas, getState, onSelect) {
     canvas.width = r.width * dpr; canvas.height = r.height * dpr;
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, map.W, map.H);
-    map.proj = map.proj || mapProj();
-    ctx.fillStyle = css('--fabric');
-    DATA.fabric.forEach(p => { const [x, y] = toXY(p[0], p[1]); ctx.fillRect(x - 1, y - 1, 2, 2); });
+    if (!map.fitted) { fit(); map.fitted = true; }
+    ctx.fillStyle = css('--surface');
+    ctx.fillRect(0, 0, map.W, map.H);
+    drawTiles(ctx);
     const md = mapData();
     const mx = Math.max(...md.arr.map(x => x.v), 1);
     map.bubbles = [];
     const surface = css('--surface');
+    const zoomF = Math.min(map.fitRes / map.res, 1.6) ** 0.5;
     md.arr.sort((a, b) => b.v - a.v);
     md.arr.forEach(({ s, v, pv }) => {
-      const [x, y] = toXY(s.lat, s.lon);
-      const rad = (3 + Math.sqrt(v / mx) * 24) * Math.min(map.k, 1.6) ** 0.5;
+      const [x, y] = toScreen(...pts.get(s.name));
+      const rad = (3 + Math.sqrt(v / mx) * 24) * zoomF;
       let fill;
       if (st.mode === 'chg' && md.hasPrev) {
         const ch = pv > 0 ? (v - pv) / pv : (v > 0 ? 1 : 0);
@@ -207,8 +310,8 @@ export function createMap(canvas, getState, onSelect) {
     ctx.font = '600 11px system-ui, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     md.arr.slice(0, 5).forEach(({ s, v }) => {
-      const [x, y] = toXY(s.lat, s.lon);
-      const rad = (3 + Math.sqrt(v / mx) * 24) * Math.min(map.k, 1.6) ** 0.5;
+      const [x, y] = toScreen(...pts.get(s.name));
+      const rad = (3 + Math.sqrt(v / mx) * 24) * zoomF;
       ctx.fillStyle = css('--ink');
       ctx.strokeStyle = surface; ctx.lineWidth = 3; ctx.lineJoin = 'round';
       ctx.strokeText(s.name, x, y - rad - 4); ctx.fillText(s.name, x, y - rad - 4);
@@ -226,18 +329,20 @@ export function createMap(canvas, getState, onSelect) {
   const onWheel = e => {
     e.preventDefault();
     const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-    const f = e.deltaY < 0 ? 1.18 : 1 / 1.18;
-    const nk = Math.max(0.6, Math.min(8, map.k * f)); const rf = nk / map.k;
-    map.tx = mx - (mx - map.tx) * rf; map.ty = my - (my - map.ty) * rf; map.k = nk;
+    const f = e.deltaY < 0 ? 1 / 1.18 : 1.18;
+    const [ix, iy] = fromScreen(mx, my);
+    map.res = Math.max(GOV_LODS[GOV_LODS.length - 1] / 2, Math.min(map.fitRes * 1.7, map.res * f));
+    const [jx, jy] = fromScreen(mx, my);
+    map.cx += ix - jx; map.cy += iy - jy;
     draw();
   };
-  const onDown = e => { map.drag = { x: e.clientX, y: e.clientY, tx: map.tx, ty: map.ty, moved: false }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; };
+  const onDown = e => { map.drag = { x: e.clientX, y: e.clientY, cx: map.cx, cy: map.cy, moved: false }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; };
   const onMove = e => {
     const r = canvas.getBoundingClientRect();
     if (map.drag) {
       const dx = e.clientX - map.drag.x, dy = e.clientY - map.drag.y;
       if (Math.hypot(dx, dy) > 3) map.drag.moved = true;
-      map.tx = map.drag.tx + dx; map.ty = map.drag.ty + dy; draw(); return;
+      map.cx = map.drag.cx - dx * map.res; map.cy = map.drag.cy + dy * map.res; draw(); return;
     }
     const b = pick(e.clientX - r.left, e.clientY - r.top);
     const hov = b ? b.s.name : null;
@@ -270,8 +375,10 @@ export function createMap(canvas, getState, onSelect) {
   ro.observe(canvas);
   return {
     draw,
-    reset() { map.k = 1; map.tx = 0; map.ty = 0; draw(); },
+    reset() { fit(); draw(); },
     destroy() {
+      map.alive = false;
+      cancelAnimationFrame(map.raf);
       ro.disconnect();
       canvas.removeEventListener('wheel', onWheel);
       canvas.removeEventListener('pointerdown', onDown);

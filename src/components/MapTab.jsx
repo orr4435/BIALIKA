@@ -27,11 +27,12 @@ function Spark({ byMonth, m0, m1 }) {
 export default function MapTab({ m0, m1, street, setStreet, themeKey }) {
   const canvasRef = useRef(null);
   const mapRef = useRef(null);
-  const stateRef = useRef({ m0, m1, mode: 'vol', street });
+  const stateRef = useRef({ m0, m1, mode: 'vol', street, basemap: 'map' });
   const [mode, setMode] = useState('vol');
+  const [basemap, setBasemap] = useState('map');
   const [notice, setNotice] = useState('');
 
-  stateRef.current = { m0, m1, mode, street };
+  stateRef.current = { m0, m1, mode, street, basemap };
 
   useEffect(() => {
     const map = createMap(canvasRef.current, () => stateRef.current, name => setStreet(name));
@@ -39,7 +40,7 @@ export default function MapTab({ m0, m1, street, setStreet, themeKey }) {
     map.draw();
     return () => map.destroy();
   }, []); // eslint-disable-line
-  useEffect(() => { mapRef.current && mapRef.current.draw(); }, [m0, m1, mode, street, themeKey]);
+  useEffect(() => { mapRef.current && mapRef.current.draw(); }, [m0, m1, mode, street, themeKey, basemap]);
 
   const md = useMemo(() => {
     const arr = DATA.streets.map(s => ({ s, v: sumR(s.byMonth, m0, m1) })).filter(x => x.v > 0);
@@ -75,6 +76,8 @@ export default function MapTab({ m0, m1, street, setStreet, themeKey }) {
               {DATA.streets.map(st => <option key={st.name} value={st.name} />)}
             </datalist>
             <button className="chip" onClick={() => mapRef.current && mapRef.current.reset()}>איפוס תצוגה</button>
+            <button className={'chip' + (basemap === 'map' ? ' on' : '')} onClick={() => setBasemap('map')}>מפה</button>
+            <button className={'chip' + (basemap === 'sat' ? ' on' : '')} onClick={() => setBasemap('sat')}>תצ״א</button>
           </div>
           <div className="map-legend">
             {notice ? <div style={{ maxWidth: 190 }}>{notice}</div> : mode === 'vol' ? (
@@ -91,6 +94,7 @@ export default function MapTab({ m0, m1, street, setStreet, themeKey }) {
               </>
             )}
             <div>גודל העיגול = כמות פניות · לחיצה לפרטים</div>
+            <div style={{ opacity: 0.75 }}>רקע: GovMap · מרכז למיפוי ישראל</div>
           </div>
         </div>
         <div className="spanel">
