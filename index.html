@@ -1,14 +1,91 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <title>מוקד עירוני קריית ביאליק · BI</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📞</text></svg>">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>קריית ביאליק · מערכות BI</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+<script>
+  // Old bookmarks pointed the site root at the moked app's tab deep-links — honor them.
+  (function () {
+    var h = location.hash.replace('#', '');
+    if (['overview', 'compare', 'map', 'tables'].indexOf(h) !== -1) {
+      location.replace('/moked.html' + location.search + location.hash);
+    } else if (new URLSearchParams(location.search).has('ask')) {
+      location.replace('/moked.html' + location.search);
+    }
+  })();
+</script>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --border:rgba(11,11,11,.10); --accent:#2a78d6; --accent2:#1baf7a;
+    --shadow:0 8px 30px rgba(11,11,11,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --border:rgba(255,255,255,.12); --accent:#3987e5; --accent2:#199e70;
+      --shadow:0 8px 30px rgba(0,0,0,.45);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    direction:rtl; line-height:1.45;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px 20px; gap:8px;
+  }
+  .city{ font-size:15px; font-weight:600; letter-spacing:.08em; color:var(--muted); }
+  h1{ margin:2px 0 6px; font-size:clamp(26px,4.5vw,38px); font-weight:800; }
+  .sub{ color:var(--ink2); font-size:16px; margin-bottom:30px; }
+  .cards{
+    display:flex; flex-wrap:wrap; gap:22px; justify-content:center; width:100%; max-width:860px;
+  }
+  .card{
+    flex:1 1 300px; max-width:400px; border:1px solid var(--border);
+    border-radius:18px; background:var(--surface); padding:30px 26px 26px;
+    text-align:right; box-shadow:var(--shadow); text-decoration:none; color:inherit;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card:hover, .card:focus-visible{
+    transform:translateY(-4px); border-color:var(--card-accent);
+    box-shadow:0 14px 40px rgba(11,11,11,.14); outline:none;
+  }
+  .card .icon{
+    width:58px; height:58px; border-radius:15px; display:flex; align-items:center;
+    justify-content:center; font-size:28px; color:#fff; background:var(--card-accent);
+  }
+  .card h2{ margin:6px 0 0; font-size:21px; font-weight:800; }
+  .card p{ margin:0; color:var(--ink2); font-size:14.5px; }
+  .card .go{ margin-top:10px; font-size:14px; font-weight:700; color:var(--card-accent); }
+  .card.moked{ --card-accent:var(--accent); }
+  .card.gvia{ --card-accent:var(--accent2); }
+  footer{ margin-top:38px; color:var(--muted); font-size:12.5px; }
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+  <div class="city">עיריית קריית ביאליק</div>
+  <h1>מערכות BI</h1>
+  <div class="sub">בחרו את הדשבורד שברצונכם לפתוח</div>
+  <div class="cards">
+    <a class="card moked" href="/moked.html">
+      <div class="icon">📞</div>
+      <h2>מוקד עירוני</h2>
+      <p>דשבורד פניות המוקד לשנת 2025 — נושאים, זמני טיפול, השוואות תקופתיות, מפת פניות וצ׳אט חכם.</p>
+      <div class="go">כניסה לדשבורד ←</div>
+    </a>
+    <a class="card gvia" href="/gvia.html">
+      <div class="icon">💰</div>
+      <h2>ניתוח גבייה</h2>
+      <p>תמונת מצב חוב ארנונה — יתרות, פילוחי חייבים, תובנות גבייה ומפת חובות.</p>
+      <div class="go">כניסה לדשבורד ←</div>
+    </a>
+  </div>
+  <footer>עיריית קריית ביאליק · מערכות מידע</footer>
 </body>
 </html>
