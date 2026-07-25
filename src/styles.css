@@ -246,6 +246,31 @@ table.kbt th .arr { font-size: 10px; }
 @keyframes blink { 0%,70%,100% { opacity: .25; } 35% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: .6; } }
 
+/* ============ מרכז ידע (knowledge center) ============ */
+.kc-list { display: flex; flex-direction: column; gap: 8px; }
+.kc-entry { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.kc-entry.on { border-color: var(--accent); }
+.kc-entry-head {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  background: none; border: none; cursor: pointer; text-align: right; font: inherit; color: var(--ink);
+}
+.kc-entry-head:hover { background: var(--wash); }
+.kc-rank { font-size: 11px; color: var(--muted); font-weight: 700; flex: none; min-width: 26px; }
+.kc-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.kc-title b { font-size: 14px; font-weight: 650; }
+.kc-q { font-size: 12.5px; color: var(--ink2); font-weight: 400; }
+.kc-chev { font-size: 10px; color: var(--muted); flex: none; }
+.kc-entry-body { padding: 0 14px 14px; border-top: 1px solid var(--grid); padding-top: 10px; }
+.kc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.kc-chip { font-size: 12px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 4px 10px; }
+.kc-chip.muted { background: var(--wash); color: var(--muted); }
+.kc-chip.sm { font-size: 11px; padding: 3px 8px; }
+.kc-guide { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 5px; }
+.kc-guide li { font-size: 13px; color: var(--ink2); line-height: 1.5; }
+.kc-status-row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.kc-status-row .lbl { font-size: 12px; color: var(--muted); font-weight: 600; }
+.kc-empty { color: var(--muted); font-size: 13.5px; padding: 10px 2px; }
+
 .hidden { display: none !important; }
 @media (prefers-reduced-motion: no-preference) {
   .tabpage { animation: fadein .18s ease; }

@@ -6,6 +6,7 @@ import Overview from './components/Overview.jsx';
 import Compare from './components/Compare.jsx';
 import MapTab from './components/MapTab.jsx';
 import Tables from './components/Tables.jsx';
+import Knowledge from './components/Knowledge.jsx';
 import Chat from './components/Chat.jsx';
 
 const PRESETS = [
@@ -14,6 +15,7 @@ const PRESETS = [
 ];
 const TABS = [
   ['overview', 'סקירה'], ['compare', 'השוואת תקופות'], ['map', 'מפה'], ['tables', 'טבלאות'],
+  ['knowledge', 'מרכז ידע'],
 ];
 const MODE_LABEL = { auto: 'תצוגה: אוטו', light: 'תצוגה: בהיר', dark: 'תצוגה: כהה' };
 
@@ -102,6 +104,7 @@ export default function App() {
         {tab === 'compare' && <Compare cmp={cmp} setCmp={setCmp} />}
         {tab === 'map' && <MapTab m0={m0} m1={m1} street={street} setStreet={setStreet} themeKey={themeKey} />}
         {tab === 'tables' && <Tables m0={m0} m1={m1} />}
+        {tab === 'knowledge' && <Knowledge />}
       </div>
       <footer className="foot">
         מקור: קובץ רשימת פניות של המוקד העירוני (73,284 פניות, ינואר–דצמבר 2025) · מיקומי רחובות: שכבת כתובות עירונית (רשת ישראל, הומרה ל-WGS84) בתוספת איתור OpenStreetMap לרחובות חדשים ·
